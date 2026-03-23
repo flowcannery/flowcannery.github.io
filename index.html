@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowCannery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e0e0e;
+      --track: #1a1a1a;
+      --accent: #e8f840;
+      --orange: #ff5c1a;
+      --muted: #444;
+      --text: #f0f0f0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    .cursor {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s ease, width 0.2s, height 0.2s;
+      mix-blend-mode: difference;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.4;
+    }
+
+    /* Track animation background */
+    .track-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .track-line {
+      position: absolute;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--muted), transparent);
+      animation: scanline 8s linear infinite;
+      opacity: 0;
+    }
+
+    @keyframes scanline {
+      0% { opacity: 0; transform: translateY(-100vh); }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(100vh); }
+    }
+
+    /* Trajectory SVG */
+    .trajectory-bg {
+      position: fixed;
+      bottom: -10%;
+      right: -5%;
+      width: 60vw;
+      opacity: 0.06;
+      z-index: 0;
+      animation: float 12s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-20px) rotate(-5deg); }
+    }
+
+    /* Main layout */
+    .container {
+      position: relative;
+      z-index: 10;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-top: 1rem;
+      animation: fadeDown 1s ease both;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      letter-spacing: 0.05em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--muted);
+      padding: 0.3rem 0.6rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Hero */
+    .hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 4rem 0 2rem;
+      gap: 2rem;
+    }
+
+    .tagline-block {
+      overflow: hidden;
+    }
+
+    .tagline {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3.5rem, 12vw, 9rem);
+      line-height: 0.92;
+      letter-spacing: -0.01em;
+      animation: slideUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+    }
+
+    .tagline .line2 {
+      color: var(--accent);
+      display: block;
+      animation-delay: 0.35s;
+    }
+
+    .tagline .line3 {
+      color: var(--orange);
+      display: block;
+      animation-delay: 0.5s;
+      -webkit-text-stroke: 1px var(--orange);
+      color: transparent;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(110%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .sub {
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      max-width: 400px;
+      line-height: 1.8;
+      animation: fadeIn 1s ease 0.8s both;
+    }
+
+    .sub strong {
+      color: var(--text);
+    }
+
+    /* Data readout */
+    .data-strip {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      animation: fadeIn 1s ease 1s both;
+    }
+
+    .data-item {
+      border-left: 2px solid var(--orange);
+      padding-left: 1rem;
+    }
+
+    .data-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .data-value {
+      font-size: 1.4rem;
+      color: var(--accent);
+      font-weight: 300;
+      font-style: italic;
+    }
+
+    /* Email form */
+    .notify-block {
+      animation: fadeIn 1s ease 1.2s both;
+      max-width: 480px;
+    }
+
+    .notify-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+      display: block;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 0;
+    }
+
+    input[type="email"] {
+      flex: 1;
+      background: var(--track);
+      border: 1px solid var(--muted);
+      border-right: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 0.8rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="email"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="email"]::placeholder {
+      color: var(--muted);
+    }
+
+    button[type="submit"] {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      padding: 0.8rem 1.5rem;
+      cursor: none;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button[type="submit"]:hover {
+      background: var(--orange);
+      transform: translateX(2px);
+    }
+
+    .success-msg {
+      display: none;
+      font-size: 0.75rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      margin-top: 0.8rem;
+    }
+
+    /* Footer */
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-top: 1px solid var(--track);
+      padding-top: 1.5rem;
+      animation: fadeIn 1s ease 1.4s both;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-copy {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .footer-links a {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    /* Blinking cursor */
+    .blink {
+      display: inline-block;
+      width: 3px;
+      height: 1em;
+      background: var(--accent);
+      vertical-align: middle;
+      margin-left: 4px;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Speed counter animation */
+    .counter {
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+
+<!-- Scanlines -->
+<div class="track-bg" id="trackBg"></div>
+
+<!-- Background trajectory -->
+<svg class="trajectory-bg" viewBox="0 0 620 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M0 125 C30 125 40 20 80 20 C120 20 140 230 180 230 C220 230 240 20 280 20 C320 20 340 230 380 230 C420 230 440 20 480 20 C520 20 540 230 580 230 C610 230 620 125 620 125" stroke="#ff5c1a" stroke-width="3" stroke-dasharray="8 4"/>
+  <path d="M0 100 C50 100 60 150 100 150 C150 150 160 80 200 80 C250 80 260 170 300 170 C350 170 360 60 400 60 C450 60 460 180 500 180 C550 180 560 100 620 100" stroke="#e8f840" stroke-width="2" opacity="0.5"/>
+  <circle cx="0" cy="125" r="6" fill="#e8f840"/>
+  <circle cx="620" cy="125" r="6" fill="#ff5c1a" opacity="0.5"/>
+</svg>
+
+<div class="container">
+  <header>
+    <div>
+      <div class="logo">Flow<span>Cannery</span></div>
+      <div class="badge">Bicycle Telemetry Platform</div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="tagline-block">
+      <div class="tagline">
+        Something cool<br>
+        <span class="line2">is rolling</span>
+        <span class="line3">in<span class="blink"></span></span>
+      </div>
+    </div>
+
+    <p class="sub">
+      <strong>100Hz positioning.</strong> Where GPS ends,<br>
+      FlowCannery begins — every roller, every berm,<br>
+      every line. Pump track to trail.<br><br>
+      <strong>Be first to ride the data.</strong>
+    </p>
+
+    <div class="data-strip">
+      <div class="data-item">
+        <div class="data-label">Sampling rate</div>
+        <div class="data-value">100 Hz</div>
+      </div>
+      <div class="data-item">
+        <div class="data-label">vs Strava</div>
+        <div class="data-value">100×</div>
+      </div>
+      <div class="data-item">
+        <div class="data-label">Status</div>
+        <div class="data-value" style="font-size:1rem; color: var(--orange);">In development</div>
+      </div>
+    </div>
+
+    <div class="notify-block">
+      <span class="notify-label">Get early access</span>
+      <div class="form-row">
+        <input type="email" id="emailInput" placeholder="your@email.com">
+        <button type="submit" onclick="handleSubmit()">Notify me</button>
+      </div>
+      <div class="success-msg" id="successMsg">
+        ✓ &nbsp; You're on the list. See you on the track.
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="footer-copy">© 2025 FlowCannery · Lisbon, Portugal</span>
+    <div class="footer-links">
+      <a href="https://instagram.com/flowcannery" target="_blank">Instagram</a>
+      <a href="/cdn-cgi/l/email-protection#badcd6d5cdd9dbd4d4dfc8c3faddd7dbd3d694d9d5d7">Contact</a>
+    </div>
+  </footer>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+
+  // Scanlines
+  const bg = document.getElementById('trackBg');
+  for (let i = 0; i < 6; i++) {
+    const line = document.createElement('div');
+    line.className = 'track-line';
+    line.style.width = (40 + Math.random() * 60) + '%';
+    line.style.left = (Math.random() * 60) + '%';
+    line.style.top = (Math.random() * 100) + '%';
+    line.style.animationDelay = (i * 1.4) + 's';
+    line.style.animationDuration = (7 + Math.random() * 5) + 's';
+    bg.appendChild(line);
+  }
+
+  // Form
+  function handleSubmit() {
+    const email = document.getElementById('emailInput').value;
+    if (!email || !email.includes('@')) return;
+    document.getElementById('successMsg').style.display = 'block';
+    document.getElementById('emailInput').value = '';
+  }
